@@ -8,48 +8,44 @@ import java.util.Optional;
 
 /**
  * Port interface for user data operations.
- * This port is implemented by the data layer (adapter) and defines the contract
- * for persistence operations on user entities.
+ * Implementiert im Data-Modul (Adapter).
  */
 public interface UserDataService {
 
     /**
-     * Clears all user data from the data store.
-     * Typically used for testing or administrative purposes.
+     * Löscht alle Benutzer (hauptsächlich für Tests).
      */
     void clear();
 
     /**
-     * Returns all users.
-     *
-     * @return a list of all users; never null
+     * Liefert alle Benutzer.
      */
     @NonNull
     List<User> findAll();
 
     /**
-     * Finds a user by their unique identifier.
-     *
-     * @param id the unique identifier of the user; must not be null
-     * @return an Optional containing the user if found, or empty if not found
+     * Findet Benutzer nach ID.
      */
     @NonNull
     Optional<User> findById(@NonNull Long id);
 
     /**
-     * Creates or updates a user.
-     *
-     * @param user the user to create or update; must not be null
-     * @return the persisted user entity with updated timestamps and ID; never null
+     * Findet Benutzer nach Login-Name.
+     * (für /api/users/filter?login_name=...)
+     */
+    @NonNull
+    Optional<User> findByLoginName(@NonNull String loginName);
+
+    /**
+     * Erzeugt oder aktualisiert einen Benutzer.
      */
     @NonNull
     User upsert(@NonNull User user);
 
     /**
-     * Deletes a user by their unique identifier.
-     *
-     * @param id the unique identifier of the user to delete; must not be null
+     * Löscht Benutzer nach ID.
      */
     void delete(@NonNull Long id);
 }
+
 
