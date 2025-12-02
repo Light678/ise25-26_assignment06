@@ -1,69 +1,51 @@
 package de.seuhd.campuscoffee.tests.system;
 
 import de.seuhd.campuscoffee.domain.model.User;
-import de.seuhd.campuscoffee.tests.TestFixtures;
+import de.seuhd.campuscoffee.domain.ports.UserDataService;
+import de.seuhd.campuscoffee.domain.tests.TestFixtures;
 import org.junit.jupiter.api.Test;
-
-import java.util.List;
+import org.springframework.beans.factory.annotation.Autowired;
 
 public class UsersSystemTests extends AbstractSysTest {
 
+    @Autowired
+    private UserDataService userDataService;
+
     @Test
     void createUser() {
+        // Beispiel-User aus Fixtures, aber ohne ID/Timestamps (für Insert)
         User userToCreate = TestFixtures.getUserListForInsertion().getFirst();
 
-        // User über API anlegen
-        User createdUser = userDtoMapper.toDomain(
-                userRequests.create(
-                        List.of(userDtoMapper.fromDomain(userToCreate))
-                ).getFirst()
-        );
+        // direkt über den Domain-Port speichern
+        User createdUser = userDataService.upsert(userToCreate);
 
-        // Vergleich: gleiche Daten, aber IDs/Timestamps dürfen sich unterscheiden
+        // gleiche Daten, IDs/Timestamps dürfen abweichen
         assertEqualsIgnoringIdAndTimestamps(createdUser, userToCreate);
     }
 
-    /**
-     * Zusätzlicher Test 1:
-     * Abrufen eines Benutzers über seine ID.
-     */
     @Test
     void getUserByIdReturnsCreatedUser() {
         User userToCreate = TestFixtures.getUserListForInsertion().getFirst();
 
-        // Zuerst User anlegen
-        User createdUser = userDtoMapper.toDomain(
-                userRequests.create(
-                        List.of(userDtoMapper.fromDomain(userToCreate))
-                ).getFirst()
-        );
+        User createdUser = userDataService.upsert(userToCreate);
 
-        // Dann per ID wieder abrufen
-        var fetchedUserDto = userRequests.getById(createdUser.id());
-        User fetchedUser = userDtoMapper.toDomain(fetchedUserDto);
+        User fetchedUser = userDataService.getById(createdUser.id());
 
         assertEqualsIgnoringIdAndTimestamps(fetchedUser, userToCreate);
     }
 
-    /**
-     * Zusätzlicher Test 2:
-     * Abrufen eines Benutzers über den Login-Namen mit dem Filter-Endpoint.
-     */
     @Test
-    void getUserByLoginNameFilterReturnsCreatedUser() {
+    void getUserByLoginNameReturnsCreatedUser() {
         User userToCreate = TestFixtures.getUserListForInsertion().getFirst();
 
-        // User anlegen
-        User createdUser = userDtoMapper.toDomain(
-                userRequests.create(
-                        List.of(userDtoMapper.fromDomain(userToCreate))
-                ).getFirst()
-        );
+        User createdUser = userDataService.upsert(userToCreate);
 
-        // Über Filter-Endpoint (analog PosController) abrufen
-        var fetchedUserDto = userRequests.getByLoginName(createdUser.loginName());
-        User fetchedUser = userDtoMapper.toDomain(fetchedUserDto);
+        User fetchedUser = userDataService.getByLoginName(createdUser.loginName());
 
         assertEqualsIgnoringIdAndTimestamps(fetchedUser, userToCreate);
     }
 }
+
+
+
+

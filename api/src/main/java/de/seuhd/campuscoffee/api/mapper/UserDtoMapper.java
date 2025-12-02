@@ -1,11 +1,15 @@
 package de.seuhd.campuscoffee.api.mapper;
 
-import de.seuhd.campuscoffee.api.dto.UserDto;
+import de.seuhd.campuscoffee.api.dtos.UserDto;
 import de.seuhd.campuscoffee.domain.model.User;
+import org.mapstruct.Mapper;
 
+@Mapper(componentModel = "spring")
 public interface UserDtoMapper {
 
+    // Domain -> DTO
     UserDto toDto(User user);
 
+    // DTO -> Domain
     User toDomain(UserDto dto);
 }

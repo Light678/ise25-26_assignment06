@@ -3,22 +3,15 @@ package de.seuhd.campuscoffee.api.controller;
 import de.seuhd.campuscoffee.api.dtos.UserDto;
 import de.seuhd.campuscoffee.api.mapper.UserDtoMapper;
 import de.seuhd.campuscoffee.domain.ports.UserDataService;
-import de.seuhd.campuscoffee.domain.model.User;
-import io.swagger.v3.oas.annotations.tags.Tag;
 import jakarta.validation.Valid;
 import lombok.RequiredArgsConstructor;
-import lombok.extern.slf4j.Slf4j;
 import org.springframework.http.HttpStatus;
-import org.springframework.http.ResponseEntity;
-import org.springframework.stereotype.Controller;
 import org.springframework.web.bind.annotation.*;
 
 import java.util.List;
 
-@Tag(name = "Users", description = "Operations related to user management.")
-@Controller
+@RestController
 @RequestMapping("/api/users")
-@Slf4j
 @RequiredArgsConstructor
 public class UserController {
 
@@ -30,65 +23,49 @@ public class UserController {
      * Abrufen aller Benutzer.
      */
     @GetMapping
-    @ResponseBody
-    public ResponseEntity<List<UserDto>> getAllUsers() {
-        log.debug("Retrieving all users");
-        List<UserDto> dtos = userDataService.findAll()
-                .stream()
+    public List<UserDto> getAllUsers() {
+        return userDataService.getAll().stream()
                 .map(userDtoMapper::toDto)
                 .toList();
-        return ResponseEntity.ok(dtos);
     }
 
     /**
      * GET /api/users/{id}
-     * Abrufen eines Benutzers basierend auf einer ID.
+     * Abrufen eines Benutzers nach ID.
      */
     @GetMapping("/{id}")
-    @ResponseBody
-    public ResponseEntity<UserDto> getUserById(@PathVariable Long id) {
-        log.debug("Retrieving user with id={}", id);
-        return userDataService.findById(id)
-                .map(userDtoMapper::toDto)
-                .map(ResponseEntity::ok)
-                .orElseGet(() -> ResponseEntity.notFound().build());
+    public UserDto getUserById(@PathVariable Long id) {
+        return userDtoMapper.toDto(userDataService.getById(id));
     }
 
     /**
      * GET /api/users/filter?login_name=...
-     * Abrufen eines Benutzers nach Anmeldename (analog zum PosController).
+     * Abrufen eines Benutzers nach Login-Name (analog PosController-Filter).
      */
     @GetMapping("/filter")
-    @ResponseBody
-    public ResponseEntity<UserDto> getUserByLoginName(
-            @RequestParam(name = "login_name") String loginName
-    ) {
-        log.debug("Retrieving user with loginName={}", loginName);
-        return userDataService.findByLoginName(loginName)
-                .map(userDtoMapper::toDto)
-                .map(ResponseEntity::ok)
-                .orElseGet(() -> ResponseEntity.notFound().build());
+    public UserDto getUserByLoginName(@RequestParam("login_name") String loginName) {
+        return userDtoMapper.toDto(userDataService.getByLoginName(loginName));
     }
 
     /**
      * POST /api/users
-     * Erstellen eines neuen Benutzers.
+     * Erstellen von Benutzern.
+     * Wie bei POS wird eine Liste von DTOs erwartet/zurückgegeben.
      */
     @PostMapping
-    @ResponseBody
-    public ResponseEntity<UserDto> createUser(@Valid @RequestBody UserDto userDto) {
-        log.debug("Creating new user: {}", userDto);
-
-        // ID und Timestamps beim Erstellen von der DB setzen lassen
-        userDto.setId(null);
-        userDto.setCreatedAt(null);
-        userDto.setUpdatedAt(null);
-
-        User toCreate = userDtoMapper.toDomain(userDto);
-        User created = userDataService.upsert(toCreate);
-
-        UserDto responseBody = userDtoMapper.toDto(created);
-        return ResponseEntity.status(HttpStatus.CREATED).body(responseBody);
+    @ResponseStatus(HttpStatus.CREATED)
+    public List<UserDto> createUsers(@RequestBody @Valid List<UserDto> userDtos) {
+        return userDtos.stream()
+                // IDs und Timestamps bei Erstellung ignorieren
+                .map(dto -> dto.toBuilder()
+                        .id(null)
+                        .createdAt(null)
+                        .updatedAt(null)
+                        .build())
+                .map(userDtoMapper::toDomain)
+                .map(userDataService::upsert)   // id == null -> create
+                .map(userDtoMapper::toDto)
+                .toList();
     }
 
     /**
@@ -96,31 +73,32 @@ public class UserController {
      * Aktualisieren eines bestehenden Benutzers.
      */
     @PutMapping("/{id}")
-    @ResponseBody
-    public ResponseEntity<UserDto> updateUser(
-            @PathVariable Long id,
-            @Valid @RequestBody UserDto userDto
-    ) {
-        log.debug("Updating user with id={} using {}", id, userDto);
+    public UserDto updateUser(@PathVariable Long id,
+                              @RequestBody @Valid UserDto userDto) {
 
-        userDto.setId(id);
-        User toUpdate = userDtoMapper.toDomain(userDto);
-        User updated = userDataService.upsert(toUpdate);
+        // ID aus Pfad verwenden, Timestamps vom Domain-Layer setzen lassen
+        UserDto normalizedDto = userDto.toBuilder()
+                .id(id)
+                .createdAt(null)
+                .updatedAt(null)
+                .build();
 
-        UserDto responseBody = userDtoMapper.toDto(updated);
-        return ResponseEntity.ok(responseBody);
+        return userDtoMapper.toDto(
+                userDataService.upsert(
+                        userDtoMapper.toDomain(normalizedDto)
+                )
+        );
     }
 
     /**
      * DELETE /api/users/{id}
-     * Löschen eines bestehenden Benutzers.
+     * Löschen eines Benutzers nach ID.
      */
     @DeleteMapping("/{id}")
-    @ResponseBody
-    public ResponseEntity<Void> deleteUser(@PathVariable Long id) {
-        log.debug("Deleting user with id={}", id);
+    @ResponseStatus(HttpStatus.NO_CONTENT)
+    public void deleteUser(@PathVariable Long id) {
         userDataService.delete(id);
-        return ResponseEntity.noContent().build();
     }
 }
+
 

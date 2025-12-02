@@ -47,6 +47,8 @@ public abstract class AbstractSysTest {
     @Autowired
     protected PosDtoMapper posDtoMapper;
 
+
+
     //TODO: Uncomment after user DTO mapper is implemented
     //@Autowired
     //protected UserDtoMapper userDtoMapper;
